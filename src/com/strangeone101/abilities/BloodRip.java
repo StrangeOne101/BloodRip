@@ -4,13 +4,14 @@ import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
 import com.projectkorra.projectkorra.GeneralMethods;
 import com.projectkorra.projectkorra.ProjectKorra;
@@ -19,7 +20,6 @@ import com.projectkorra.projectkorra.ability.BloodAbility;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.util.DamageHandler;
 import com.projectkorra.projectkorra.util.ParticleEffect;
-import com.projectkorra.projectkorra.util.ParticleEffect.BlockData;
 
 public class BloodRip extends BloodAbility implements AddonAbility
 {	
@@ -76,6 +76,7 @@ public class BloodRip extends BloodAbility implements AddonAbility
 		start();
 	}
 	
+	@SuppressWarnings("deprecation")
 	@Override
 	public void progress() 
 	{	
@@ -92,17 +93,17 @@ public class BloodRip extends BloodAbility implements AddonAbility
 		if (chargeTime > neededChargeTime) chargeTime = neededChargeTime;
 		
 		if (this.lastChargeDisplay + 1000 < System.currentTimeMillis() || chargeTime >= neededChargeTime) {
-			
-			displayCharge(1 / neededChargeTime * chargeTime);
+			displayCharge((float) chargeTime / (float) neededChargeTime);
 			for (int i = 0; i < (chargeTime >= neededChargeTime ? 2 : 8); i++) {
-				ParticleEffect.SMOKE.display(new Vector(0, 0.1, 0), 0.5F, this.entity.getLocation().add(0.5 - random.nextFloat(), 0.7 + random.nextFloat() / 2, 0.5 - random.nextFloat()), 257D);
+				Location l = this.entity.getLocation().add(0.5 - random.nextFloat(), 0.7 + random.nextFloat() / 2, 0.5 - random.nextFloat());
+				ParticleEffect.SMOKE_NORMAL.display(l, 1, 0, 0.1, 0, 0.02);
 			}
 			this.lastChargeDisplay = System.currentTimeMillis();
 		}
 		
 		if (!this.player.isSneaking())
 		{
-			if (chargeTime >= 1000L) {
+			if (chargeTime >= 1000L || neededChargeTime == chargeTime) {
 				affect(MAXDAMAGE / neededChargeTime * chargeTime);
 				bPlayer.addCooldown(this);
 				remove();
@@ -115,6 +116,7 @@ public class BloodRip extends BloodAbility implements AddonAbility
 		return;
 	}	
 	
+	@SuppressWarnings("deprecation")
 	public double getKillDamage() {
 		long neededChargeTime = (long) (CHARGETIME / (this.entity.getMaxHealth() > MAXDAMAGE ? this.entity.getMaxHealth() : MAXDAMAGE) * this.entity.getHealth());
 		long chargeTime = System.currentTimeMillis() - this.getStartTime();
@@ -123,9 +125,9 @@ public class BloodRip extends BloodAbility implements AddonAbility
 	}
 	
 	private void displayCharge(float charge) {
+		if (charge > 1) charge = 1F;
 		Location location = GeneralMethods.getRightSide(this.player.getLocation(), 0.55D).add(0.0D, 1.3D, 0.0D).toVector().add(this.player.getEyeLocation().getDirection().clone().multiply(0.75D)).toLocation(this.player.getWorld());
-		ParticleEffect.RED_DUST.display(255 * charge, 0, 0, 0.004F, 0, location, 257D);
-		ParticleEffect.RED_DUST.display(255 * charge, 0, 0, 0.004F, 0, location, 257D);
+		getPlayer().getWorld().spawnParticle(Particle.REDSTONE, location, 1, 0F, 0F, 0F, new Particle.DustOptions(Color.fromRGB((int) (charge * 255), 0, 0), 1));
 	}
 	
 	public void affect(double damage)
@@ -147,10 +149,13 @@ public class BloodRip extends BloodAbility implements AddonAbility
 			
 		}
 		DamageHandler.damageEntity(entity, damage, this);
-		for (int i = 0; i < 16; i++) {
-			ParticleEffect.RED_DUST.display(0, 0, 0, 0.004F, 0, this.entity.getLocation().add(0.5 - random.nextFloat(), -0.25D + random.nextFloat(), 0.5 - random.nextFloat()), 257D);
-		}
-		ParticleEffect.BLOCK_CRACK.display(new BlockData(Material.REDSTONE_BLOCK, (byte)0), 0, 0.4F, 0, 0.5F, 48, this.entity.getLocation(), 256);
+		getPlayer().getWorld().spawnParticle(Particle.REDSTONE, this.entity.getLocation(), 16, 0.5F, 0.5F, 0.5F, new Particle.DustOptions(Color.RED, 2));
+		/*for (int i = 0; i < 16; i++) {
+			Location l = this.entity.getLocation().clone().add(0.5 - random.nextFloat(), -0.25D + random.nextFloat(), 0.5 - random.nextFloat());
+
+			ParticleEffect.REDSTONE.display(, 1, 0, 0, 0.004F);
+		}*/
+		ParticleEffect.BLOCK_CRACK.display(this.entity.getLocation(), 48, 0.4F, 0, 0.5F , Material.REDSTONE_BLOCK.createBlockData());
 		
 			
 	}
@@ -185,7 +190,7 @@ public class BloodRip extends BloodAbility implements AddonAbility
 	@Override
 	public String getVersion() 
 	{
-		return "1.0";
+		return "1.2";
 	}
 
 	@Override

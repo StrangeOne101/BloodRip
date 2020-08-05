@@ -4,12 +4,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockFromToEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 
 import com.projectkorra.projectkorra.BendingPlayer;
 import com.projectkorra.projectkorra.ability.CoreAbility;
+import com.projectkorra.projectkorra.util.ActionBar;
+import com.projectkorra.projectkorra.util.ParticleEffect;
+
+import net.md_5.bungee.api.ChatColor;
 
 public class BloodRipListener implements Listener {	
 	
@@ -23,6 +28,7 @@ public class BloodRipListener implements Listener {
 		}
 	}
 	
+	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void onDeath(EntityDeathEvent event) {
 		if (BloodRip.dedPlayers.contains(event.getEntity())) {		
@@ -72,5 +78,17 @@ public class BloodRipListener implements Listener {
 		
 		//Prevent our "blood" sources from flowing.
 		if (BloodSource.instances.containsKey(event.getBlock())) event.setCancelled(true);
+	}
+	
+	@EventHandler
+	public void onDamge(EntityDamageEvent event) {
+		if (event.isCancelled()) return;
+		
+		if (event.getEntity() instanceof Player && CoreAbility.hasAbility((Player)event.getEntity(), BloodRip.class)) {
+			CoreAbility.getAbility((Player)event.getEntity(), BloodRip.class).remove();
+			
+			ActionBar.sendActionBar(ChatColor.RED + "* You lose focus *", (Player)event.getEntity());
+			ParticleEffect.VILLAGER_ANGRY.display(event.getEntity().getLocation(), 4, 0.5F, 0.5F, 0.5F);
+		}
 	}
 }

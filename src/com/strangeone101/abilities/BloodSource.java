@@ -4,10 +4,12 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.projectkorra.projectkorra.ProjectKorra;
@@ -18,9 +20,9 @@ public class BloodSource
 	public static ConcurrentHashMap<Block, BloodSource> instances = new ConcurrentHashMap<Block, BloodSource>();
 	
 	private Block block;
-	private MaterialData oldData;
+	private BlockData oldData;
 	private BukkitRunnable task;
-	private int usesLeft;
+	private int usesLeft = 1;
 	private long expirey;
 	private long startTime;
 	
@@ -38,16 +40,21 @@ public class BloodSource
 		
 		final BloodSource instance = this;
 		
-		if (block.getType() != Material.STATIONARY_WATER && block.getType() != Material.WATER) {
-			this.oldData = block.getState().getData().clone();
-			block.setType(Material.STATIONARY_WATER);
+		if (block.getType() != Material.WATER) {
+			this.oldData = block.getState().getBlockData().clone();
+			/*if (block.getState() instanceof Waterlogged) {
+				((Waterlogged) block.getState()).setWaterlogged(true);
+			} else {*/
+				block.setType(Material.WATER);
+			//}
+
 			new BukkitRunnable() {
 				public void run() {
 					for (Player player : Bukkit.getOnlinePlayers()) {
-						player.sendBlockChange(instance.block.getLocation(), instance.oldData.getItemType(), instance.oldData.getData());
+						player.sendBlockChange(instance.block.getLocation(), instance.oldData);
 					}
 				}
-			}.runTaskLater(ProjectKorra.plugin, 1L);
+			}.runTaskLater(ProjectKorra.plugin, 2L);
 			
 		}
 		instances.put(block, this);
@@ -58,13 +65,13 @@ public class BloodSource
 			Random random = new Random();
 			@Override
 			public void run() {
-				if (usesLeft <= 0 || System.currentTimeMillis() > startTime + expirey || instance.block.getType() != Material.STATIONARY_WATER) {
+				if (usesLeft <= 0 || System.currentTimeMillis() > startTime + expirey || instance.block.getType() != Material.WATER) {
 					remove();
 				} else {
 					for (int i = 0; i < 16; i++) {
-						ParticleEffect.RED_DUST.display(0, 0, 0, 0.004F, 0, instance.block.getLocation().clone().add(random.nextFloat(), random.nextFloat(), random.nextFloat()), 80D);
+						instance.block.getWorld().spawnParticle(Particle.REDSTONE, instance.block.getLocation().clone().add(random.nextFloat(), random.nextFloat(), random.nextFloat()), 1, 0, 0, 0, new Particle.DustOptions(Color.RED, 1.5F));
 					}
-					ParticleEffect.BLOCK_CRACK.display(new ParticleEffect.BlockData(Material.REDSTONE_BLOCK, (byte)0), 0F, 0F, 0F, 1, 40, instance.block.getLocation().clone().add(0.5, 0.5, 0.5), 80);
+					ParticleEffect.BLOCK_CRACK.display(instance.block.getLocation().clone().add(0.5, 0.5, 0.5), 40, 0.3F, 0.3F, 0.3F, Material.REDSTONE_BLOCK.createBlockData());
 				}
 			}
 			
@@ -73,12 +80,10 @@ public class BloodSource
 		((BukkitRunnable) task).runTaskTimer(ProjectKorra.plugin, 1L, 4L);
 	}
 	
-	@SuppressWarnings("deprecation")
 	public void remove() {
 		task.cancel();
 		instances.remove(block);
-		this.block.setType(oldData.getItemType());
-		this.block.setData(oldData.getData());
+		this.block.setBlockData(oldData);
 	}
 	
 	
